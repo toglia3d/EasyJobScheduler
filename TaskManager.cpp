@@ -1,45 +1,45 @@
-#include <string>
-#include <unordered_map>
-#include <iostream>
+#include "TaskManager.h"
+#include <ostream>
 #include <fstream>
-#include <algorithm>
-#include <cctype>
+#include <iostream>
 
-
-class Task
+bool TaskManager::get_task_paths(int argc, char** argv, std::string& main_task, std::vector<std::string>& arguments)
 {
-public:
-    std::string m_name;
-    std::string m_commands;
-    std::vector<std::string> m_dependencies;
-};
-
-using task_map = std::unordered_map<std::string, Task>;
-
-class Job
-{
-    std::unordered_map<std::string, std::string> m_tasks;
-    std::unordered_map<std::string, std::vector<std::string>> m_dependencies;
-};
-
-static std::vector<std::string> split(std::string const& argument, const char separator)
-{
-    std::vector<std::string> result;
-
-    std::string::size_type token_index = 0;
-    while ((token_index = argument.find_first_not_of(separator, token_index)) != std::string::npos)
+    if (argc < 3)
     {
-        const auto next_token_index = argument.find_first_of(separator, token_index);
-        auto word = argument.substr(token_index, next_token_index - token_index);
-        word.erase(std::remove_if(word.begin(), word.end(), ::isspace), word.end());
-        result.push_back(word);
-        token_index = next_token_index;
+        return false;
     }
-    return result;
+
+    arguments.reserve(argc-2);
+    for (auto i = 2; i < argc; ++i)
+    {
+        arguments.emplace_back(argv[i]);
+    }
+
+    main_task = argv[1];
+    return true;
 }
 
+bool TaskManager::parse_tasks(std::vector<std::string> const& paths, task_map& tasks, std::string& error)
+{
+    for (const auto& path : paths)
+    {
+        auto task = parse_task(path, error);
 
-Task read_file(std::string const& path, std::string& error)
+        if (error.empty())
+        {
+            tasks[task.m_name] = task;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Task TaskManager::parse_task(std::string const& path, std::string& error)
 {
     Task task;
     std::string line;
@@ -56,7 +56,7 @@ Task read_file(std::string const& path, std::string& error)
             lineCount++;
         }
 
-        if(lineCount > 2)
+        if (lineCount > 2)
         {
             task.m_commands.erase(task.m_commands.size() - last_line.size(), last_line.size());
             task.m_dependencies = split(last_line, ',');
@@ -72,12 +72,9 @@ Task read_file(std::string const& path, std::string& error)
     return task;
 }
 
-void recurseCheckDependencies(
-    Task const& current_task, 
-    task_map const& tasks,
-    std::unordered_map<std::string, int>& visited,
-    int& current_depth,
-    bool& circular_dependency, 
+void TaskManager::validate_dependencies(Task const& current_task, task_map const& tasks,
+    std::unordered_map<std::string, int>& visited, int& current_depth,
+    bool& circular_dependency,
     std::string& trace_str)
 {
     if (circular_dependency)
@@ -108,24 +105,21 @@ void recurseCheckDependencies(
                 }
             }
 
-            recurseCheckDependencies(dependency_task, tasks, visited, current_depth, circular_dependency, trace_str);
+            validate_dependencies(dependency_task, tasks, visited, current_depth, circular_dependency, trace_str);
         }
     }
 
     current_depth--;
 }
 
-bool has_circular_dependency(
-    Task const& task, 
-    task_map const& tasks, 
-    std::string& error)
+bool TaskManager::has_circular_dependency(Task const& task, task_map const& tasks, std::string& error)
 {
     std::unordered_map<std::string, int> visited;
     bool circular_dependency_found = false;
     std::string trace_string;
     int depth = 0;
 
-    recurseCheckDependencies(task, tasks, visited, depth, circular_dependency_found, trace_string);
+    validate_dependencies(task, tasks, visited, depth, circular_dependency_found, trace_string);
 
     if (circular_dependency_found)
     {
@@ -135,8 +129,7 @@ bool has_circular_dependency(
     return circular_dependency_found;
 }
 
-
-bool can_run_task(task_map const& tasks, std::string& error)
+bool TaskManager::can_run_task(task_map const& tasks, std::string& error)
 {
     for (const auto& task_itr : tasks)
     {
@@ -146,18 +139,18 @@ bool can_run_task(task_map const& tasks, std::string& error)
         {
             if (dependency == task.m_name)
             {
-                error = "Error: \""+ task.m_name + "\" depends on itself.";
+                error = "Error: \"" + task.m_name + "\" depends on itself.";
                 return false;
             }
 
             if (tasks.find(dependency) == tasks.end())
             {
-                error = "Error: Unable to find dependency: \"" + dependency+"\"";
+                error = "Error: Unable to find dependency: \"" + dependency + "\"";
                 return false;
             }
         }
 
-        std::string dependency_tree; 
+        std::string dependency_tree;
         if (has_circular_dependency(task, tasks, dependency_tree))
         {
             error = "Error! Found circular dependency: \n" + dependency_tree;
@@ -168,9 +161,8 @@ bool can_run_task(task_map const& tasks, std::string& error)
     return true;
 }
 
-
-
-void runDependencies(Task const& current_task, task_map const& tasks, std::unordered_map<std::string, bool>& executed_tasks)
+inline void TaskManager::run_dependencies(Task const& current_task, task_map const& tasks,
+    std::unordered_map<std::string, bool>& executed_tasks)
 {
     for (const auto& dependency_name : current_task.m_dependencies)
     {
@@ -180,7 +172,7 @@ void runDependencies(Task const& current_task, task_map const& tasks, std::unord
             auto& dependency_task = dependency_task_itr->second;
             if (!dependency_task.m_dependencies.empty())
             {
-                runDependencies(dependency_task, tasks, executed_tasks);
+                run_dependencies(dependency_task, tasks, executed_tasks);
             }
 
             if (executed_tasks.find(dependency_task.m_name) == executed_tasks.end())
@@ -192,58 +184,17 @@ void runDependencies(Task const& current_task, task_map const& tasks, std::unord
     }
 }
 
-void run(Task const& task, task_map const& tasks)
+bool TaskManager::run(Task const& task, task_map const& tasks, std::string& error)
 {
-    std::unordered_map<std::string, bool> executed_tasks;
-    runDependencies(task, tasks, executed_tasks);
-    std::cout << task.m_commands << std::endl;
-}
-
-int main(int argc, char *argv[])
-{
-    std::vector<std::string> arguments;
-    arguments.reserve(argc);
-    for (int i = 0; i < argc; ++i)
-    {
-        arguments.emplace_back(argv[i]);
-    }
-
-    if (arguments.size() < 3)
-    {
-        return 0;
-    }
-
-    task_map tasks;
-    std::string error;
-
-    for (int i = 2; i<arguments.size(); ++i)
-    {
-        auto task = read_file(arguments[i], error);
-
-        if(error.empty())
-        {
-            tasks[task.m_name] = task;
-        }
-        else
-        {
-            std::cout << error << std::endl;
-            break;
-        }
-    }
-
     if (can_run_task(tasks, error))
     {
-        auto& main_task = tasks[arguments[1]];
-        run(main_task, tasks);
-    }
-    else
-    {
-        std::cout << error << std::endl;
+        std::unordered_map<std::string, bool> executed_tasks;
+        run_dependencies(task, tasks, executed_tasks);
+        std::cout << task.m_commands << std::endl;
+        return true;
     }
 
-    getchar();
-    
-    
-    return 0;
+    return false;
 }
+
 
