@@ -5,8 +5,6 @@
 #include "Helpers.h"
 #include "TaskManager.h"
 
-
-
 int main(int argc, char *argv[])
 {
     TaskManager task_manager;

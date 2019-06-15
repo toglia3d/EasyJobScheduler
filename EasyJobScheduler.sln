@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29009.5
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EasyJobScheduler", "EasyJobScheduler.vcxproj", "{76DBC360-A4BA-4793-A4E2-73CEA94A119A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EasyJobScheduler", "EasyJobScheduler\EasyJobScheduler.vcxproj", "{76DBC360-A4BA-4793-A4E2-73CEA94A119A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EasyJobSchedulerUnitTests", "..\EasyJobSchedulerUnitTests\EasyJobSchedulerUnitTests.vcxproj", "{BB260B3A-2ACD-4724-BD09-F07477B03BAF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EasyJobSchedulerUnitTests", "EasyJobSchedulerUnitTests\EasyJobSchedulerUnitTests.vcxproj", "{BB260B3A-2ACD-4724-BD09-F07477B03BAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
