@@ -1,4 +1,6 @@
-
 *.VC.db
 *.vcxproj.filters
 *.vcxproj.user
+*.log
+x64/
+.vs/
