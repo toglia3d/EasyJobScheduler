@@ -1,4 +1,6 @@
 #include "TaskManager.h"
+#include "Helpers.h"
+#include <vector>
 #include <ostream>
 #include <fstream>
 #include <iostream>
@@ -10,7 +12,6 @@ bool TaskManager::get_task_paths(int argc, char** argv, std::string& main_task, 
         return false;
     }
 
-    arguments.reserve(argc-2);
     for (auto i = 2; i < argc; ++i)
     {
         arguments.emplace_back(argv[i]);
@@ -184,6 +185,19 @@ inline void TaskManager::run_dependencies(Task const& current_task, task_map con
     }
 }
 
+bool TaskManager::run(std::string const& starting_name, task_map const& tasks, std::string& error)
+{
+    auto& starting_task_itr = tasks.find(starting_name);
+    if(starting_task_itr != tasks.end())
+    {
+        return TaskManager::run(starting_task_itr->second, tasks, error);
+    }
+    else
+    {
+        error = "Error! Task " + starting_name + " was not found.";
+        return false;
+    }
+}
 bool TaskManager::run(Task const& task, task_map const& tasks, std::string& error)
 {
     if (can_run_task(tasks, error))

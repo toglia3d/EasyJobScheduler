@@ -6,7 +6,6 @@ using task_map = std::unordered_map<std::string, Task>;
 class TaskManager
 {
 public:
-    task_map tasks;
 
     static bool get_task_paths(
         int argc,
@@ -16,17 +15,20 @@ public:
 
     static bool parse_tasks(
         std::vector<std::string> const& paths,
-        task_map& tasks, 
+        task_map& tasks,
         std::string& error);
 
     static bool run(
-        Task const& task, 
+        std::string const& starting_name, 
+        task_map const& tasks, 
+        std::string& error);
+
+private:
+    static bool run(
+        Task const& task,
         task_map const& tasks,
         std::string& error);
 
-
-
-private:
     static Task parse_task(
         std::string const& path,
         std::string& error);

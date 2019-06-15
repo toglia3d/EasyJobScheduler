@@ -7,7 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-    TaskManager task_manager;
     std::vector<std::string> paths;
     std::string task_name;
     
@@ -26,8 +25,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    auto& main_task = tasks[task_name];
-    if (!TaskManager::run(main_task, tasks, error))
+    if (!TaskManager::run(task_name, tasks, error))
     {
         std::cout << error << std::endl;
     }
