@@ -4,8 +4,13 @@
 #include <ostream>
 #include <fstream>
 #include <iostream>
+#include "TaskExecutor.h"
 
-bool TaskManager::get_task_paths(int argc, char** argv, std::string& main_task, std::vector<std::string>& arguments)
+bool TaskManager::get_task_paths(
+    int argc, 
+    char** argv, 
+    std::string& main_task, 
+    std::vector<std::string>& arguments)
 {
     if (argc < 3)
     {
@@ -21,7 +26,10 @@ bool TaskManager::get_task_paths(int argc, char** argv, std::string& main_task, 
     return true;
 }
 
-bool TaskManager::parse_tasks(std::vector<std::string> const& paths, task_map& tasks, std::string& error)
+bool TaskManager::parse_tasks(
+    std::vector<std::string> const& paths, 
+    task_map& tasks, 
+    std::string& error)
 {
     for (const auto& path : paths)
     {
@@ -49,18 +57,18 @@ Task TaskManager::parse_task(std::string const& path, std::string& error)
     {
         getline(my_file, task.m_name);
         std::string last_line;
-        int lineCount = 1;
+        int line_count = 1;
         while (getline(my_file, line))
         {
             last_line = line;
             task.m_commands += line;
-            lineCount++;
+            line_count++;
         }
 
-        if (lineCount > 2)
+        if (line_count > 2)
         {
             task.m_commands.erase(task.m_commands.size() - last_line.size(), last_line.size());
-            task.m_dependencies = split(last_line, ',');
+            task.m_dependencies = Helpers::split_string(last_line, ',');
         }
 
         my_file.close();
@@ -73,8 +81,11 @@ Task TaskManager::parse_task(std::string const& path, std::string& error)
     return task;
 }
 
-void TaskManager::validate_dependencies(Task const& current_task, task_map const& tasks,
-    std::unordered_map<std::string, int>& visited, int& current_depth,
+void TaskManager::validate_dependencies(
+    Task const& current_task, 
+    task_map const& tasks,
+    std::unordered_map<std::string, int>& visited, 
+    int& current_depth,
     bool& circular_dependency,
     std::string& trace_str)
 {
@@ -113,7 +124,10 @@ void TaskManager::validate_dependencies(Task const& current_task, task_map const
     current_depth--;
 }
 
-bool TaskManager::has_circular_dependency(Task const& task, task_map const& tasks, std::string& error)
+bool TaskManager::has_circular_dependency(
+    Task const& task, 
+    task_map const& tasks, 
+    std::string& error)
 {
     std::unordered_map<std::string, int> visited;
     bool circular_dependency_found = false;
@@ -130,7 +144,9 @@ bool TaskManager::has_circular_dependency(Task const& task, task_map const& task
     return circular_dependency_found;
 }
 
-bool TaskManager::can_run_task(task_map const& tasks, std::string& error)
+bool TaskManager::can_run_task(
+    task_map const& tasks, 
+    std::string& error)
 {
     for (const auto& task_itr : tasks)
     {
@@ -162,7 +178,9 @@ bool TaskManager::can_run_task(task_map const& tasks, std::string& error)
     return true;
 }
 
-inline void TaskManager::run_dependencies(Task const& current_task, task_map const& tasks,
+inline void TaskManager::run_dependencies(
+    Task const& current_task, 
+    task_map const& tasks,
     std::unordered_map<std::string, bool>& executed_tasks)
 {
     for (const auto& dependency_name : current_task.m_dependencies)
@@ -178,19 +196,22 @@ inline void TaskManager::run_dependencies(Task const& current_task, task_map con
 
             if (executed_tasks.find(dependency_task.m_name) == executed_tasks.end())
             {
-                std::cout << dependency_task.m_commands << std::endl;
+                TaskExecutor::run(dependency_task.m_commands);
                 executed_tasks[dependency_task.m_name] = true;
             }
         }
     }
 }
 
-bool TaskManager::run(std::string const& starting_name, task_map const& tasks, std::string& error)
+bool TaskManager::run(
+    std::string const& starting_name, 
+    task_map const& tasks, 
+    std::string& error)
 {
-    auto& starting_task_itr = tasks.find(starting_name);
+    const auto starting_task_itr = tasks.find(starting_name);
     if(starting_task_itr != tasks.end())
     {
-        return TaskManager::run(starting_task_itr->second, tasks, error);
+        return run(starting_task_itr->second, tasks, error);
     }
     else
     {
@@ -198,13 +219,16 @@ bool TaskManager::run(std::string const& starting_name, task_map const& tasks, s
         return false;
     }
 }
-bool TaskManager::run(Task const& task, task_map const& tasks, std::string& error)
+bool TaskManager::run(
+    Task const& task, 
+    task_map const& tasks, 
+    std::string& error)
 {
     if (can_run_task(tasks, error))
     {
         std::unordered_map<std::string, bool> executed_tasks;
         run_dependencies(task, tasks, executed_tasks);
-        std::cout << task.m_commands << std::endl;
+        TaskExecutor::run(task.m_commands);
         return true;
     }
 

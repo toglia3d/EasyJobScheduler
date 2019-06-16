@@ -6,7 +6,6 @@ using task_map = std::unordered_map<std::string, Task>;
 class TaskManager
 {
 public:
-
     static bool get_task_paths(
         int argc,
         char** argv,

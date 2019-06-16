@@ -79,12 +79,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Task.cpp" />
+    <ClCompile Include="TaskExecutor.cpp" />
     <ClCompile Include="TaskManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Task.h" />
+    <ClInclude Include="TaskExecutor.h" />
     <ClInclude Include="TaskManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
