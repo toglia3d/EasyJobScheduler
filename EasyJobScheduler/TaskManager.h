@@ -1,4 +1,7 @@
 #pragma once
+#ifndef TASK_MANAGER_H
+#define TASK_MANAGER_H
+
 #include "Task.h"
 
 using task_map = std::unordered_map<std::string, Task>;
@@ -38,7 +41,7 @@ private:
         std::unordered_map<std::string, int>& visited,
         int& current_depth,
         bool& circular_dependency,
-        std::string& trace_str);
+        std::string& heap_trace);
 
     static bool has_circular_dependency(
         Task const& task,
@@ -48,9 +51,13 @@ private:
     static void run_dependencies(
         Task const& current_task,
         task_map const& tasks,
-        std::unordered_map<std::string, bool>& executed_tasks);
+        std::vector<std::string>& execution_order,
+        bool& run_failed,
+        std::string& error);
 
     static bool can_run_task(
         task_map const& tasks, 
         std::string& error);
 };
+
+#endif

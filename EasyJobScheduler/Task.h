@@ -1,4 +1,6 @@
 #pragma once
+#ifndef TASK_H
+#define TASK_H
 
 #include <string>
 #include <unordered_map>
@@ -22,6 +24,7 @@ public:
     Task();
 };
 
+#endif
 
 
 

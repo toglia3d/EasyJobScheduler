@@ -1,7 +1,7 @@
 #include "TaskExecutor.h"
 
 
-void TaskExecutor::run(std::string const& commands)
+bool TaskExecutor::run(std::string const& commands)
 {
-    system(commands.c_str());
+    return system(commands.c_str()) == 0;
 }

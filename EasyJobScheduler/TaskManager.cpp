@@ -1,10 +1,11 @@
 #include "TaskManager.h"
-#include "Helpers.h"
+
 #include <vector>
-#include <ostream>
 #include <fstream>
-#include <iostream>
+
+#include "Helpers.h"
 #include "TaskExecutor.h"
+
 
 bool TaskManager::get_task_paths(
     int argc, 
@@ -75,7 +76,7 @@ Task TaskManager::parse_task(std::string const& path, std::string& error)
     }
     else
     {
-        error = "Unable to open file";
+        error = "Error: Unable to open file.";
     }
 
     return task;
@@ -87,14 +88,14 @@ void TaskManager::validate_dependencies(
     std::unordered_map<std::string, int>& visited, 
     int& current_depth,
     bool& circular_dependency,
-    std::string& trace_str)
+    std::string& heap_trace)
 {
     if (circular_dependency)
     {
         return;
     }
 
-    trace_str += current_task.m_name + "->";
+    heap_trace += current_task.m_name + "->";
     visited[current_task.m_name] = current_depth;
 
     current_depth++;
@@ -112,12 +113,12 @@ void TaskManager::validate_dependencies(
                 if (visited_depth < current_depth)
                 {
                     circular_dependency = true;
-                    trace_str += dependency_task.m_name;
+                    heap_trace += dependency_task.m_name;
                     break;
                 }
             }
 
-            validate_dependencies(dependency_task, tasks, visited, current_depth, circular_dependency, trace_str);
+            validate_dependencies(dependency_task, tasks, visited, current_depth, circular_dependency, heap_trace);
         }
     }
 
@@ -170,7 +171,7 @@ bool TaskManager::can_run_task(
         std::string dependency_tree;
         if (has_circular_dependency(task, tasks, dependency_tree))
         {
-            error = "Error! Found circular dependency: \n" + dependency_tree;
+            error = "Error: Found circular dependency: \n" + dependency_tree;
             return false;
         }
     }
@@ -181,8 +182,15 @@ bool TaskManager::can_run_task(
 inline void TaskManager::run_dependencies(
     Task const& current_task, 
     task_map const& tasks,
-    std::unordered_map<std::string, bool>& executed_tasks)
+    std::vector<std::string>& execution_order,
+    bool& run_failed,
+    std::string& error)
 {
+    if (run_failed)
+    {
+        return;
+    }
+
     for (const auto& dependency_name : current_task.m_dependencies)
     {
         auto dependency_task_itr = tasks.find(dependency_name);
@@ -191,13 +199,22 @@ inline void TaskManager::run_dependencies(
             auto& dependency_task = dependency_task_itr->second;
             if (!dependency_task.m_dependencies.empty())
             {
-                run_dependencies(dependency_task, tasks, executed_tasks);
+                run_dependencies(dependency_task, tasks, execution_order, run_failed, error);
             }
 
-            if (executed_tasks.find(dependency_task.m_name) == executed_tasks.end())
+            if (std::find( 
+                execution_order.begin(), 
+                execution_order.end(), 
+                dependency_task.m_name) == execution_order.end())
             {
-                TaskExecutor::run(dependency_task.m_commands);
-                executed_tasks[dependency_task.m_name] = true;
+                if (!TaskExecutor::run(dependency_task.m_commands))
+                {
+                    run_failed = true;
+                    error = "Error: Task \"" + dependency_task.m_name + "\" has not ended successfully.";
+                    return;
+                }
+
+                execution_order.emplace_back(dependency_task.m_name);
             }
         }
     }
@@ -215,24 +232,40 @@ bool TaskManager::run(
     }
     else
     {
-        error = "Error! Task " + starting_name + " was not found.";
+        error = "Error: Task \"" + starting_name + "\" was not found.";
         return false;
     }
 }
+
 bool TaskManager::run(
     Task const& task, 
     task_map const& tasks, 
     std::string& error)
 {
-    if (can_run_task(tasks, error))
+    if (!can_run_task(tasks, error))
     {
-        std::unordered_map<std::string, bool> executed_tasks;
-        run_dependencies(task, tasks, executed_tasks);
-        TaskExecutor::run(task.m_commands);
-        return true;
+        return false;
     }
 
-    return false;
+    std::vector<std::string> execution_order;
+    bool failed = false;
+
+    run_dependencies(task, tasks, execution_order, failed, error);
+
+    if (failed)
+    {
+        return false;
+    }
+
+    if (!TaskExecutor::run(task.m_commands))
+    {
+        error = "Error: Task \"" + task.m_name + "\" has not ended successfully.";
+        return false;
+    }
+
+    execution_order.emplace_back(task.m_name);
+
+    return true;
 }
 
 

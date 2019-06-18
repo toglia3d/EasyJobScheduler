@@ -1,9 +1,13 @@
 #pragma once
+#ifndef TASK_EXECUTOR_HPP
+#define TASK_EXECUTOR_HPP
+
 #include <string>
 
 class TaskExecutor
 {
 public:
-    static void run(std::string const& commands);
+    static bool run(std::string const& commands);
 };
 
+#endif
