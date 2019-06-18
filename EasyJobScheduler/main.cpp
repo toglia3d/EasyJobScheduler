@@ -12,8 +12,8 @@ int main(int argc, char *argv[])
     
     if (!TaskManager::get_task_paths(argc, argv, task_name, paths))
     {
-        std::cout << "Not valid arguments" << std::endl;
-        return 0;
+        std::cout << "Error: Arguments not valid." << std::endl;
+        return -1;
     }
 
     task_map tasks;
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     if (!TaskManager::parse_tasks(paths, tasks, error))
     {
         std::cout << error << std::endl;
-        return 0;
+        return -1;
     }
 
     if (!TaskManager::run(task_name, tasks, error))

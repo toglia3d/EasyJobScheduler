@@ -4,7 +4,7 @@
 
 #include <string>
 
-class TaskExecutor
+class TaskExecutor final
 {
 public:
     static bool run(std::string const& commands);

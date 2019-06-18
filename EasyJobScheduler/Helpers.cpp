@@ -2,6 +2,8 @@
 
 #include <cctype>
 #include <algorithm>
+#include <string>
+#include <fstream>
 
 std::vector<std::string> Helpers::split_string(std::string const& argument, char separator)
 {
@@ -17,4 +19,28 @@ std::vector<std::string> Helpers::split_string(std::string const& argument, char
         token_index = next_token_index;
     }
     return result;
+}
+
+std::vector<std::string> Helpers::parse_file_lines(std::string const& file_path)
+{
+    std::vector<std::string> lines;
+    try
+    {
+        std::ifstream file_read(file_path);
+        if (file_read.is_open())
+        {
+            std::string line;
+            while (getline(file_read, line))
+            {
+                lines.push_back(line);
+            }
+            file_read.close();
+        }
+    }
+    catch(...)
+    {
+        return {};
+    }
+    
+    return lines;
 }

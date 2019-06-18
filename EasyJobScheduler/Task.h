@@ -6,12 +6,10 @@
 #include <unordered_map>
 #include <vector>
 
-class TaskManager;
+// Task Container 
 
-class Task
+class Task final
 {
-    friend class TaskManager;
-
 public:
     std::string                 m_name;
     std::string                 m_commands;

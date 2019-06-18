@@ -2,28 +2,26 @@
 
 #include <vector>
 #include <fstream>
-
 #include "Helpers.h"
 #include "TaskExecutor.h"
 
-
 bool TaskManager::get_task_paths(
-    int argc, 
-    char** argv, 
+    int main_arguments_count, 
+    char** main_arguments, 
     std::string& main_task, 
-    std::vector<std::string>& arguments)
+    std::vector<std::string>& file_paths)
 {
-    if (argc < 3)
+    if (main_arguments_count < 3)
     {
         return false;
     }
 
-    for (auto i = 2; i < argc; ++i)
+    for (auto i = 2; i < main_arguments_count; ++i)
     {
-        arguments.emplace_back(argv[i]);
+        file_paths.emplace_back(main_arguments[i]);
     }
 
-    main_task = argv[1];
+    main_task = main_arguments[1];
     return true;
 }
 
@@ -34,9 +32,8 @@ bool TaskManager::parse_tasks(
 {
     for (const auto& path : paths)
     {
-        auto task = parse_task(path, error);
-
-        if (error.empty())
+        Task task;
+        if (parse_task(path, task, error))
         {
             tasks[task.m_name] = task;
         }
@@ -49,37 +46,46 @@ bool TaskManager::parse_tasks(
     return true;
 }
 
-Task TaskManager::parse_task(std::string const& path, std::string& error)
+bool TaskManager::parse_task(std::string const& path, Task& task, std::string& error)
 {
-    Task task;
-    std::string line;
-    std::ifstream my_file(path);
-    if (my_file.is_open())
+    try
     {
-        getline(my_file, task.m_name);
-        std::string last_line;
-        int line_count = 1;
-        while (getline(my_file, line))
+        std::ifstream my_file(path);
+        if (my_file.is_open())
         {
-            last_line = line;
-            task.m_commands += line;
-            line_count++;
-        }
+            std::string last_line;
+            int line_count = 1;
 
-        if (line_count > 2)
+            getline(my_file, task.m_name);
+            std::string line;
+            while (getline(my_file, line))
+            {
+                last_line = line;
+                task.m_commands += line;
+                line_count++;
+            }
+
+            if (line_count > 2)
+            {
+                task.m_commands.erase(task.m_commands.size() - last_line.size(), last_line.size());
+                task.m_dependencies = Helpers::split_string(last_line, ',');
+            }
+
+            my_file.close();
+        }
+        else
         {
-            task.m_commands.erase(task.m_commands.size() - last_line.size(), last_line.size());
-            task.m_dependencies = Helpers::split_string(last_line, ',');
+            error = "Error: Unable to open file " + path + ".";
+            return false;
         }
-
-        my_file.close();
     }
-    else
+    catch (...)
     {
-        error = "Error: Unable to open file.";
+        error = "Error: While reading file " + path + ".";
+        return false;
     }
 
-    return task;
+    return true;
 }
 
 void TaskManager::validate_dependencies(
