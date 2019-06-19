@@ -9,10 +9,12 @@ bool TaskManager::get_task_paths(
     int main_arguments_count, 
     char** main_arguments, 
     std::string& main_task, 
-    std::vector<std::string>& file_paths)
+    std::vector<std::string>& file_paths,
+    std::string& error)
 {
     if (main_arguments_count < 3)
     {
+        error = "Error: Arguments are not valid.";
         return false;
     }
 
@@ -33,6 +35,13 @@ bool TaskManager::parse_tasks(
     for (const auto& path : paths)
     {
         Task task;
+
+        if (tasks.find(task.m_name) != tasks.end())
+        {
+            error = "Error: Task name \"" + task.m_name + "\" was found in multiple files.";
+            return false;
+        }
+
         if (parse_task(path, task, error))
         {
             tasks[task.m_name] = task;
@@ -63,6 +72,12 @@ bool TaskManager::parse_task(std::string const& path, Task& task, std::string& e
                 last_line = line;
                 task.m_commands += line;
                 line_count++;
+            }
+
+            if (line_count < 2)
+            {
+                error = "Error: Task "+ task.m_name +" is incomplete.";
+                return false;
             }
 
             if (line_count > 2)

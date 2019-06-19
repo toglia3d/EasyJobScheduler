@@ -16,12 +16,30 @@ namespace EasyJobSchedulerUnitTests
 	TEST_CLASS(EasyJobSchedulerUnitTests)
 	{
 	public:
+        
+        const char* TestFileName = "OutputTestFile";
+        FILE* file_write;
+
+        bool redirect_output_begin()
+        {
+            freopen_s(&file_write, TestFileName, "a", stdout);
+            Assert::IsTrue(file_write != nullptr);
+            return file_write != nullptr;
+        }
+
+        std::vector<std::string> redirect_output_end() const
+        {
+            fclose(file_write);
+            std::vector<std::string> lines = Helpers::parse_file_lines(TestFileName);
+            remove(TestFileName);
+            return lines;
+        }
 
         // TestTaskExecutor:
         // Checking that console detects when a command is correct and when it is not
         TEST_METHOD(TestTaskExecutor)
         {
-            auto value = TaskExecutor::run(R"(echo "A")");
+            auto value = TaskExecutor::run(R"(echo A)");
             Assert::IsTrue(value);
 
             value = TaskExecutor::run(R"(BadBadNotGood)");
@@ -40,31 +58,22 @@ namespace EasyJobSchedulerUnitTests
             map["B"] = Task("B", "echo B", {});
             map["C"] = Task("C", "echo C", { {"A"},{"B"} });
 
-            const char* TestFileName = "TestNormalCase";
-
-            FILE* file_write;
-            freopen_s(&file_write, TestFileName, "a", stdout);
-            Assert::IsTrue(file_write != nullptr);
-            if(!file_write)
+            if (!redirect_output_begin())
             {
-                return;
+                Assert::IsTrue(false);
             }
-
+            
             std::string error;
             const auto result = TaskManager::run("C", map, error);
+
+            auto lines = redirect_output_end();
+
             Assert::AreEqual(result, true);
             Assert::IsTrue(error.empty());
-
-            fclose(file_write);
-
-            std::vector<std::string> lines = Helpers::parse_file_lines(TestFileName);
-
             Assert::IsTrue(lines.size()==3);
             Assert::IsTrue(lines[0] == "A");
             Assert::IsTrue(lines[1] == "B");
             Assert::IsTrue(lines[2] == "C");
-
-            remove(TestFileName);
 		}
 
 
@@ -82,32 +91,23 @@ namespace EasyJobSchedulerUnitTests
             map["C"] = Task("C", "echo C", {"D"});
             map["D"] = Task("D", "echo D", { });
 
-            const char* TestFileName = "TestDiamondCase";
-
-            FILE* file_write;
-            freopen_s(&file_write, TestFileName, "a", stdout);
-            Assert::IsTrue(file_write != nullptr);
-            if (!file_write)
+            if (!redirect_output_begin())
             {
-                return;
+                Assert::IsTrue(false);
             }
 
             std::string error;
             const auto result = TaskManager::run("A", map, error);
+
+            auto lines = redirect_output_end();
+
             Assert::AreEqual(result, true);
             Assert::IsTrue(error.empty());
-
-            fclose(file_write);
-
-            std::vector<std::string> lines = Helpers::parse_file_lines(TestFileName);
-
             Assert::IsTrue(lines.size() == 4);
             Assert::IsTrue(lines[0] == "D");
             Assert::IsTrue(lines[1] == "B");
             Assert::IsTrue(lines[2] == "C");
-            Assert::IsTrue(lines[3] == "A");
-
-            remove(TestFileName);
+            Assert::IsTrue(lines[3] == "A");            
         }
 
         // TestCircularDependency:
@@ -144,5 +144,27 @@ namespace EasyJobSchedulerUnitTests
             Assert::IsTrue(!result);
         }
 
+        // TestDuplicatedNames:
+        // Tasks can have multiple lines of commands. This is allowed.
+        TEST_METHOD(TestTaskWithMultipleLineCommands)
+        {
+            task_map map;
+            map["A"] = Task("A", "echo A&& echo AA", { });
+
+            if (!redirect_output_begin())
+            {
+                Assert::IsTrue(false);
+            }
+
+            std::string error;
+            const auto result = TaskManager::run("A", map, error);
+
+            auto lines = redirect_output_end();
+
+            Assert::IsTrue(result);
+            Assert::IsTrue(lines.size() == 2);
+            Assert::IsTrue(lines[0] == "A");
+            Assert::IsTrue(lines[1] == "AA");
+        }
 	};
 }

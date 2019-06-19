@@ -26,15 +26,15 @@ std::vector<std::string> Helpers::parse_file_lines(std::string const& file_path)
     std::vector<std::string> lines;
     try
     {
-        std::ifstream file_read(file_path);
-        if (file_read.is_open())
+        std::ifstream file(file_path);
+        if (file.is_open())
         {
             std::string line;
-            while (getline(file_read, line))
+            while (getline(file, line))
             {
                 lines.push_back(line);
             }
-            file_read.close();
+            file.close();
         }
     }
     catch(...)
